@@ -68,6 +68,6 @@ jobs:
             release-dist/**/*.tar.gz
           generate_release_notes: false
           body: |
-            **ES2 Import Tool v${{ github.ref_name }}**
+            **ES2 Import Tool ${{ github.ref_name }}**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
