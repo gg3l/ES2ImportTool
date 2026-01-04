@@ -56,7 +56,8 @@
     "nsis": {
       "installerIcon": "icon.ico",
       "uninstallerIcon": "icon.ico",
-      "installerHeaderIcon": "icon.ico"
+      "installerHeaderIcon": "icon.ico",
+      "packElevateHelper": false
     }
   }
 }
