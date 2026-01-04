@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ES2 Import Tool</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <section class="pathrow">
+    <div class="pathrow__label">UGC folder</div>
+    <button id="ugcPickBtn" class="pathbtn" type="button">Browse…</button>
+    <button id="btnRescan" class="iconbtn" type="button" title="Rescan rooms" aria-label="Rescan rooms" disabled>
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path fill="currentColor" d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.75 6h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L14 10h8V2l-4.35 4.35z"/>
+      </svg>
+    </button>
+  </section>
+
+  <main class="main">
+    <section class="panel">
+      <div class="panel__header">
+        <div class="panel__title">Source room</div>
+        <select id="sourceSelect" class="select"></select>
+      </div>
+
+      <div class="panel__filters">
+        <input id="sourceFilter" class="input" type="text" placeholder="Filter…" />
+        <label class="chk"><input id="sourceSearchName" type="checkbox" checked /> Name</label>
+        <label class="chk"><input id="sourceSearchPropId" type="checkbox" checked /> PropId</label>
+        <label class="chk"><input id="sourceSearchId" type="checkbox" checked /> ID</label>
+      </div>
+
+      <div id="sourceTree" class="tree"></div>
+
+      <div class="copybar">
+        <button id="btnLog" class="btn btn--small" type="button" title="Session log" aria-label="Session log">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 4h12v16H6z"/>
+            <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M8 8h8M8 12h8M8 16h6"/>
+          </svg>
+        </button>
+        <button id="btnCopy" class="btn btn--primary btn--small" type="button" title="Copy selected props to target" aria-label="Copy to target" disabled>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>
+            <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M10 12h7"/>
+            <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 9l3 3-3 3"/>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <div class="panel__title">Target room</div>
+        <select id="targetSelect" class="select"></select>
+      </div>
+
+      <div class="panel__filters">
+        <input id="targetFilter" class="input" type="text" placeholder="Filter…" />
+        <label class="chk"><input id="targetSearchName" type="checkbox" checked /> Name</label>
+        <label class="chk"><input id="targetSearchPropId" type="checkbox" checked /> PropId</label>
+        <label class="chk"><input id="targetSearchId" type="checkbox" checked /> ID</label>
+      </div>
+
+      <div id="targetTree" class="tree"></div>
+
+      <div class="restore">
+        <div class="restore__row">
+          <select id="restoreSelect" class="select"></select>
+          <button id="btnRestore" class="btn btn--small" type="button" title="Restore selected point" aria-label="Restore" disabled>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 1 0 3-6.7"/>
+              <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 4v5h5"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="logModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="logModalTitle">
+    <div class="modal__backdrop" data-close="1"></div>
+    <div class="modal__card">
+      <div class="modal__head">
+        <div id="logModalTitle" class="modal__title">Session log</div>
+        <button id="btnCloseLog" class="iconbtn" type="button" title="Close" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+        </button>
+      </div>
+      <div id="logList" class="loglist"></div>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal__backdrop" data-close="1"></div>
+    <div class="modal__card modal__card--narrow">
+      <div class="modal__head">
+        <div id="confirmTitle" class="modal__title">Confirm restore</div>
+        <button id="btnCloseConfirm" class="iconbtn" type="button" title="Close" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal__body">
+        <div class="confirm__row">
+          <div class="confirm__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22">
+              <path d="M12 2L1 21h22L12 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M12 9v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M12 17h.01" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="confirm__text">
+            <div id="confirmMsg" class="confirm__msg">Restore?</div>
+            <div id="confirmDetail" class="confirm__detail">This cannot be undone.</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal__foot">
+        <button id="btnConfirmCancel" class="btn btn--small" type="button">Cancel</button>
+        <button id="btnConfirmOk" class="btn btn--primary btn--small" type="button">Restore</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="busy" class="busy hidden">
+    <div class="busy__card">
+      <div id="busyTitle" class="busy__title">Working…</div>
+      <div id="busyMsg" class="busy__msg">Please wait</div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite">
+    <div id="toastTitle" class="toast__title">Info</div>
+    <div id="toastBody" class="toast__body">—</div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
