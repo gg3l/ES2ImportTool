@@ -8,8 +8,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "electron .",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder --publish never"
   },
   "dependencies": {
     "fs-extra": "^11.2.0",
