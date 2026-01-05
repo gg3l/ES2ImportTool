@@ -1,6 +1,6 @@
 {
   "name": "es2-import-tool",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Escape Simulator 2 Import Tool",
   "main": "src/main.js",
   "author": "",
