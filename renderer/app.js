@@ -15,6 +15,7 @@ const state = {
     searchPropId: true,
     searchId: true,
     selectedId: null,
+    expandedIds: new Set(),
     propCount: 0,
   },
 
@@ -26,6 +27,7 @@ const state = {
     searchPropId: true,
     searchId: true,
     selectedId: null,
+    expandedIds: new Set(),
     propCount: 0,
     restorePoints: [],
     selectedRestoreFile: null,
@@ -50,20 +52,22 @@ function countNodes(roots) {
   return c;
 }
 
-function cloneNode(n, expandParents = false) {
+function cloneNode(n, expandedIds) {
   return {
     id: n.id,
     parentId: n.parentId,
     displayName: n.displayName,
     propId: n.propId,
-    isExpanded: !!expandParents,
-    children: (n.children || []).map(ch => cloneNode(ch, expandParents))
+    isExpanded: !!expandedIds?.has?.(n.id),
+    children: (n.children || []).map(ch => cloneNode(ch, expandedIds))
   };
 }
 
-function filterNode(node, f, searchName, searchPropId, searchId) {
+function filterNode(node, f, searchName, searchPropId, searchId, expandedIds) {
   const filter = (f || '').trim().toLowerCase();
   const hasFilter = filter.length > 0;
+
+  const isExpandedByUser = !!expandedIds?.has?.(node.id);
 
   let selfMatches = !hasFilter;
   if (hasFilter) {
@@ -74,7 +78,7 @@ function filterNode(node, f, searchName, searchPropId, searchId) {
 
   const keptChildren = [];
   for (const child of node.children || []) {
-    const kept = filterNode(child, f, searchName, searchPropId, searchId);
+    const kept = filterNode(child, f, searchName, searchPropId, searchId, expandedIds);
     if (kept) keptChildren.push(kept);
   }
 
@@ -85,17 +89,17 @@ function filterNode(node, f, searchName, searchPropId, searchId) {
     parentId: node.parentId,
     displayName: node.displayName,
     propId: node.propId,
-    isExpanded: keptChildren.length > 0,
+    isExpanded: keptChildren.length > 0 || isExpandedByUser,
     children: keptChildren
   };
 }
 
-function filterRoots(roots, f, searchName, searchPropId, searchId) {
+function filterRoots(roots, f, searchName, searchPropId, searchId, expandedIds) {
   const hasText = (f || '').trim().length > 0;
   if (!hasText) {
-    return (roots || []).map(r => cloneNode(r, false));
+    return (roots || []).map(r => cloneNode(r, expandedIds));
   }
-  return (roots || []).map(r => filterNode(r, f, searchName, searchPropId, searchId)).filter(Boolean);
+  return (roots || []).map(r => filterNode(r, f, searchName, searchPropId, searchId, expandedIds)).filter(Boolean);
 }
 
 function renderTree(container, roots, selectedId, side) {
@@ -114,7 +118,10 @@ function renderTree(container, roots, selectedId, side) {
       const kids = n.children.map(renderNodeHtml).join('');
       return `
         <details data-side="${side}" data-id="${n.id}"${open}>
-          <summary><span class="node-label${selectedClass}">${label}</span></summary>
+          <summary>
+            <span class="twisty" data-twist="1" aria-hidden="true">${n.isExpanded ? '▾' : '▸'}</span>
+            <span class="node-label${selectedClass}">${label}</span>
+          </summary>
           <div class="children">${kids}</div>
         </details>
       `;
@@ -354,6 +361,7 @@ async function refreshRooms() {
 async function loadRoom(side, roomPath) {
   const st = state[side];
   st.selectedId = null;
+  st.expandedIds = new Set();
 
   if (!roomPath) {
     st.roomPath = null;
@@ -378,7 +386,7 @@ async function loadRoom(side, roomPath) {
     st.allRoots = data.roots || [];
     st.propCount = data.propCount || 0;
 
-    const filtered = filterRoots(st.allRoots, st.filterText, st.searchName, st.searchPropId, st.searchId);
+    const filtered = filterRoots(st.allRoots, st.filterText, st.searchName, st.searchPropId, st.searchId, st.expandedIds);
 
     if (side === 'source') {
       renderTree($('sourceTree'), filtered, st.selectedId, 'source');
@@ -399,13 +407,61 @@ async function loadRoom(side, roomPath) {
 
 function applyFilter(side) {
   const st = state[side];
-  const roots = filterRoots(st.allRoots, st.filterText, st.searchName, st.searchPropId, st.searchId);
+  const roots = filterRoots(st.allRoots, st.filterText, st.searchName, st.searchPropId, st.searchId, st.expandedIds);
   const container = side === 'source' ? $('sourceTree') : $('targetTree');
   renderTree(container, roots, st.selectedId, side);
 }
 
+function findPathIds(roots, targetId) {
+  if (!roots || !Number.isFinite(targetId)) return null;
+  const path = [];
+
+  const walk = (node) => {
+    path.push(node.id);
+    if (node.id === targetId) return true;
+    for (const ch of node.children || []) {
+      if (walk(ch)) return true;
+    }
+    path.pop();
+    return false;
+  };
+
+  for (const r of roots) {
+    path.length = 0;
+    if (walk(r)) return [...path];
+  }
+  return null;
+}
+
+function expandPathToId(side, targetId) {
+  const st = state[side];
+  if (!st || !targetId) return;
+  const id = parseInt(targetId, 10);
+  if (!Number.isFinite(id)) return;
+  const p = findPathIds(st.allRoots, id);
+  if (!p) return;
+  for (const pid of p) st.expandedIds.add(pid);
+}
+
 function bindTreeSelection(container, side) {
   container.addEventListener('click', (ev) => {
+    const twisty = ev.target.closest('.twisty');
+    if (twisty) {
+      const details = twisty.closest('details');
+      const host = details || twisty.closest('[data-id]');
+      if (!host) return;
+      const id = parseInt(host.getAttribute('data-id'), 10);
+      if (!Number.isFinite(id)) return;
+
+      const st = state[side];
+      if (st.expandedIds.has(id)) st.expandedIds.delete(id);
+      else st.expandedIds.add(id);
+      applyFilter(side);
+      ev.preventDefault();
+      ev.stopPropagation();
+      return;
+    }
+
     const label = ev.target.closest('.node-label');
     if (!label) return;
 
@@ -490,14 +546,20 @@ async function doCopy() {
 
     state.target.allRoots = res.target.roots || [];
     state.target.propCount = res.target.propCount || countNodes(state.target.allRoots);
+
+    if (targetParentId) {
+      expandPathToId('target', targetParentId);
+    }
     applyFilter('target');
 
     state.target.restorePoints = res.restorePoints || [];
     await refreshRestorePoints();
 
+    const inserted = res.insertedCount || 0;
     const missing = (res.assets?.missing || []).length;
     const assetsTxt = `Assets ${res.assets?.copied || 0}/${res.assets?.total || 0}${missing ? `, missing: ${missing}` : ''}`;
-    showToast('Copy completed', `${assetsTxt}`);
+    const where = targetParentId ? `under ID ${targetParentId}` : 'at root';
+    showToast('Copy completed', `Copied ${inserted} prop(s) ${where}. ${assetsTxt}`);
 
   } catch (e) {
     console.error(e);

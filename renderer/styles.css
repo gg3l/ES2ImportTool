@@ -322,8 +322,27 @@ body{
 
 .tree details,
 .tree .leaf{margin:2px 0}
-.tree details > summary{list-style:none}
+.tree details > summary{
+  list-style:none;
+  display:flex;
+  align-items:flex-start;
+}
+.tree details > summary .node-label{flex:1 1 auto}
 .tree details > summary::-webkit-details-marker{display:none}
+
+.twisty{
+  width:16px;
+  flex:0 0 16px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin:4px 0 0 2px;
+  color:var(--muted);
+  cursor:pointer;
+  user-select:none;
+  opacity:.95;
+}
+.twisty:hover{color:var(--text)}
 
 .node-label{
   display:block;

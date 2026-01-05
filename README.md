@@ -6,7 +6,7 @@ This is an Escape Simulator 2 tool for importing Room Builder assets from one ro
 - Scans your *Escape Simulator 2* UGC folder for rooms (folders containing `Room.room`).
 - Lets you pick a **Source room** + **Target room**.
 - Shows each room's prop tree.
-- Lets you select a **source prop** (subtree root) and a **target parent prop**.
+- Lets you select a **source prop** (subtree root) and optionally a **target parent prop**.
 - Copies that subtree into the target room, including:
   - Fixing newly duplicated IDs
   - Fixing link arrays that reference props inside the copied subtree
